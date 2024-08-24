@@ -3,6 +3,7 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Logger,
   MessageEvent,
   Param,
   Patch,
@@ -15,22 +16,18 @@ import { ScoreboardDto } from './dtos/scoreboard.dto';
 
 @Controller('/scoreboard')
 export class ScoreboardController {
+  private readonly logger = new Logger(ScoreboardController.name);
+
   constructor(private readonly scoreboardService: ScoreboardService) {}
 
   @Patch(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   update(@Param('id') id: string, @Body() data: ScoreboardDto) {
-    this.scoreboardService.emit('scoreboard:update', { ...data, id });
+    this.scoreboardService.updateState({ ...data, id });
   }
 
   @Sse(':id')
   sse(@Param('id') id: string): Observable<MessageEvent> {
-    return new Observable((subscriber) => {
-      this.scoreboardService.on('scoreboard:update', (data) => {
-        if (id === data.id) {
-          subscriber.next({ data });
-        }
-      });
-    });
+    return this.scoreboardService.subscribeUpdates(id);
   }
 }
